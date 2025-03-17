@@ -84,8 +84,8 @@ app.post('/hometask_01/api/videos', (req: Request, res: Response) => {
             id: +(new Date()),
             title: req.body.title,
             author: req.body.author,
-            canBeDownloaded: true,
-            minAgeRestriction: null,
+            canBeDownloaded: req.body.canBeDownloaded || false,
+            minAgeRestriction: req.body.minAgeRestriction || null,
             createdAt: new Date().toISOString(),
             publicationDate: new Date().toISOString(),
             availableResolutions: addResolution
@@ -169,8 +169,8 @@ app.put('/hometask_01/api/videos/:ID', (req: Request, res: Response) => {
         video.title = req.body.title
         video.author = req.body.author
         video.availableResolutions = req.body.availableResolutions
-        video.canBeDownloaded = req.body.canBeDownloaded
-        video.minAgeRestriction = req.body.minAgeRestriction
+        video.canBeDownloaded = req.body.canBeDownloaded || false
+        video.minAgeRestriction = req.body.minAgeRestriction || null
         video.publicationDate = req.body.publicationDate
         res.status(204).send(video);
     } else {
@@ -237,7 +237,7 @@ app.delete('/hometask_01/api/videos/:ID', (req: Request, res: Response) => {
     res.send(404)
 })
 
-app.delete('/vid/data', (req: Request, res: Response) => {
+app.delete('/hometask_01/api/testing/all-data', (req: Request, res: Response) => {
     db.videos = [];
     res.send(204);
 })
