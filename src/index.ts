@@ -47,10 +47,10 @@ const parseMiddleware = bodyParser({});
 app.use(parseMiddleware);
 
 
-app.get('/hometask_01/api/videos', (req: Request, res: Response) => {
+app.get('/videos', (req: Request, res: Response) => {
     res.status(200).send(db.videos)
 })
-app.get('/hometask_01/api/videos/:ID', (req: Request, res: Response) => {
+app.get('/videos/:ID', (req: Request, res: Response) => {
     let video = db.videos.find(p => p.id === +req.params.ID)
     if (video) {
         res.send(video);
@@ -60,173 +60,175 @@ app.get('/hometask_01/api/videos/:ID', (req: Request, res: Response) => {
     }
 })
 
-app.post('/hometask_01/api/videos', (req: Request, res: Response) => {
+app.post('/videos', (req: Request, res: Response) => {
     const addResolution = req.body.availableResolutions
-    const validResoulution: boolean = addResolution.some((r:string) => availableRes.includes(r))
-
+    const validResoulution: boolean = addResolution.every((r: string) => availableRes.includes(r))
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
+    const validError: {errorsMessages: Record<string, string>[]} = {
+        errorsMessages: []
+    }
     let validTitle: boolean = true
-
     let validAuthor: boolean = true
-    if (req.body.title.length <= 40) {
-        validTitle = true
+
+    if (validResoulution === false) {
+        const fieldError = {
+            message: "Invalid Resolution, field must contain 'P144', 'P240', 'P360', 'P480', 'P720', 'P1080', 'P1440', 'P2160', try again!",
+            field: 'availableResolutions'
+        }
+        validError.errorsMessages.push(fieldError)
+    }
+
+    if (typeof req.body.title === 'string') {
+        if (req.body.title.length <= 40) {
+            validTitle = true
+        } else {
+            validTitle = false
+            const fieldError = {
+                message: "Invalid Title. Max field length is 40, try again!",
+                field: 'title'
+            }
+            validError.errorsMessages.push(fieldError)
+        }
     } else {
         validTitle = false
+        const fieldError = {
+            message: "Invalid Title. Max field length is 40, try again!",
+            field: 'title'
+        }
+        validError.errorsMessages.push(fieldError)
     }
 
     if (req.body.author.length <= 20) {
         validAuthor = true
     } else {
         validAuthor = false
+        const fieldError = {
+            message: "Invalid Author. Max field length is 20, try again!",
+            field: 'author'
+        }
+        validError.errorsMessages.push(fieldError)
     }
 
-    if (validTitle && validAuthor && req.body.availableResolutions.length != 0 && validResoulution) {
+    if (validTitle && validAuthor && req.body.availableResolutions.length != 0 && validResoulution === true) {
         const newVideo = {
             id: +(new Date()),
             title: req.body.title,
             author: req.body.author,
             canBeDownloaded: req.body.canBeDownloaded || false,
             minAgeRestriction: req.body.minAgeRestriction || null,
-            createdAt: new Date().toISOString(),
-            publicationDate: new Date().toISOString(),
+            createdAt: now.toISOString(),
+            publicationDate: tomorrow.toISOString(),
             availableResolutions: addResolution
         }
         db.videos.push(newVideo);
-        res.status(200).send(newVideo)
+        res.status(201).send(newVideo)
     } else {
-        if (!validResoulution) {
-            const fieldError = {
-                message: "Invalid Resolution, field must contain 'P144', 'P240', 'P360', 'P480', 'P720', 'P1080', 'P1440', 'P2160', try again!",
-                field: req.body.availableResolutions
-            }
-            res.status(400).send(fieldError)
-            return
-        }
-        if (!validTitle) {
-            const fieldError = {
-                message: "Invalid Title. Max field length is 40, try again!",
-                field: req.body.title
-            }
-            res.status(400).send(fieldError)
-            return
-        }
-        else {
-            const fieldError = {
-                message: "Invalid Author. Max field length is 20, try again!",
-                field: req.body.author
-            }
-            res.status(400).send(fieldError)
-            return
-        }
-        }
-
+        res.status(400).send(validError)
+    }
     })
 
-app.put('/hometask_01/api/videos/:ID', (req: Request, res: Response) => {
-    const addResolution = req.body.availableResolutions
-    const validResoulution: boolean = addResolution.some((r:string) => availableRes.includes(r))
-    let validTitle: boolean = true
-    let validAuthor: boolean = true
-    let video = db.videos.find(p => p.id === +req.params.ID)
-    let validDownload: boolean = true
-    let validMinAgeRestriction: boolean = true
-    let validPublicateTime = true
-
-
-    if (req.body.title.length <= 40) {
-        validTitle = true
-    } else {
-        validTitle = false
-    }
-
-    if (req.body.author.length <= 20) {
-        validAuthor = true
-    } else {
-        validAuthor = false
-    }
-
-    if (typeof req.body.canBeDownloaded === 'boolean') {
-        validDownload = true
-    } else {
-        validDownload = false
-    }
-
-    if (typeof req.body.minAgeRestriction === 'number'
-        && Number.isInteger(req.body.minAgeRestriction)
-        && req.body.minAgeRestriction > 0
-        && req.body.minAgeRestriction <= 18) {
-        validMinAgeRestriction = true
-    } else {
-        validMinAgeRestriction = false
-    }
-
-    if (isValidDateTimeString(req.body.publicationDate)) {
-        validPublicateTime = true
-    } else {
-        validPublicateTime = false
-    }
-
-    if (video && validAuthor && validTitle && req.body.availableResolutions.length != 0 && validResoulution && validDownload && validMinAgeRestriction && validPublicateTime) {
-        video.title = req.body.title
-        video.author = req.body.author
-        video.availableResolutions = req.body.availableResolutions
-        video.canBeDownloaded = req.body.canBeDownloaded || false
-        video.minAgeRestriction = req.body.minAgeRestriction || null
-        video.publicationDate = req.body.publicationDate
-        res.status(204).send(video);
-    } else {
-        if (!validResoulution) {
-            const fieldError = {
-                message: "Invalid Resolution, field must contain 'P144', 'P240', 'P360', 'P480', 'P720', 'P1080', 'P1440', 'P2160', try again!",
-                field: req.body.availableResolutions
-            }
-            res.status(400).send(fieldError)
-            return
+app.put('/videos/:ID', (req: Request, res: Response) => {
+    const findVideo = db.videos.find(v => v.id === +req.params.ID)
+    if (findVideo) {
+        const addResolution = req.body.availableResolutions
+        const validResoulution: boolean = addResolution.every((r:string) => availableRes.includes(r))
+        let validTitle: boolean = true
+        let validAuthor: boolean = true
+        let video = db.videos.find(p => p.id === +req.params.ID)
+        let validDownload: boolean = true
+        let validMinAgeRestriction: boolean = true
+        let validPublicateTime = true
+        const validError: {errorsMessages: Record<string, string>[]} = {
+            errorsMessages: []
         }
-        if (!validTitle) {
+
+        if (typeof req.body.title === 'string') {
+            if (req.body.title.length <= 40) {
+                validTitle = true
+            } else {
+                validTitle = false
+                const fieldError = {
+                    message: "Invalid Title. Max field length is 40, try again!",
+                    field: 'title'
+                }
+                validError.errorsMessages.push(fieldError)
+            }
+        } else {
+            validTitle = false
             const fieldError = {
                 message: "Invalid Title. Max field length is 40, try again!",
-                field: req.body.title
+                field: 'title'
             }
-            res.status(400).send(fieldError)
-            return
+            validError.errorsMessages.push(fieldError)
         }
-        if (!validAuthor) {
+
+        if (req.body.author.length <= 20) {
+            validAuthor = true
+        } else {
+            validAuthor = false
             const fieldError = {
                 message: "Invalid Author. Max field length is 20, try again!",
-                field: req.body.author
+                field: 'author'
             }
-            res.status(400).send(fieldError)
-            return
+            validError.errorsMessages.push(fieldError)
         }
-        if (!validDownload) {
-            const fieldError = {
-                message: "Invalid rule for download. Must be true or false",
-                field: req.body.canBeDownloaded
-            }
-            res.status(400).send(fieldError)
-            return
-        }
-        if (!validPublicateTime) {
-            const fieldError = {
-                message: "Invalid Publication time. Must be ISO format date-time",
-                field: req.body.publicationDate
-            }
-            res.status(400).send(fieldError)
-            return
-        } if (!validMinAgeRestriction) {
-            const fieldError = {
-                message: "Invalid Min Age Restiction. Must be from 1 to 18",
-                field: req.body.minAgeRestriction
-            }
-            res.status(400).send(fieldError)
-            return
+
+        if (typeof req.body.canBeDownloaded === 'boolean') {
+            validDownload = true
         } else {
-            res.send(404)
+            validDownload = false
+            const fieldError = {
+                message: "Invalid Field. This must be boolean!",
+                field: 'canBeDownloaded'
+            }
+            validError.errorsMessages.push(fieldError)
         }
+
+        if (typeof req.body.minAgeRestriction === 'number'
+            && Number.isInteger(req.body.minAgeRestriction)
+            && req.body.minAgeRestriction > 0
+            && req.body.minAgeRestriction <= 18) {
+            validMinAgeRestriction = true
+        } else {
+            validMinAgeRestriction = false
+            const fieldError = {
+                message: "Invalid Field. This must be number with range from 1 to 18!",
+                field: 'minAgeRestriction'
+            }
+            validError.errorsMessages.push(fieldError)
+        }
+
+        if (isValidDateTimeString(req.body.publicationDate)) {
+            validPublicateTime = true
+        } else {
+            validPublicateTime = false
+            const fieldError = {
+                message: "Invalid Field. This must be ISO date form",
+                field: 'publicationDate'
+            }
+            validError.errorsMessages.push(fieldError)
+        }
+
+        if (video && validAuthor && validTitle && req.body.availableResolutions.length != 0 && validResoulution && validDownload && validMinAgeRestriction && validPublicateTime) {
+            video.title = req.body.title
+            video.author = req.body.author
+            video.availableResolutions = req.body.availableResolutions
+            video.canBeDownloaded = req.body.canBeDownloaded || false
+            video.minAgeRestriction = req.body.minAgeRestriction || null
+            video.publicationDate = req.body.publicationDate
+            res.status(204).send(video);
+        } else {
+            res.status(400).send(validError)
+        }
+    } else {
+        res.send(404)
     }
+
 })
 
-app.delete('/hometask_01/api/videos/:ID', (req: Request, res: Response) => {
+app.delete('/videos/:ID', (req: Request, res: Response) => {
     for (let i = 0; i < db.videos.length; i++) {
         if (db.videos[i].id === +req.params.ID) {
             db.videos.splice(i, 1)
@@ -237,7 +239,7 @@ app.delete('/hometask_01/api/videos/:ID', (req: Request, res: Response) => {
     res.send(404)
 })
 
-app.delete('/hometask_01/api/testing/all-data', (req: Request, res: Response) => {
+app.delete('/testing/all-data', (req: Request, res: Response) => {
     db.videos = [];
     res.send(204);
 })
