@@ -1,10 +1,27 @@
 import express, {Request, Response} from 'express';
 import bodyParser from 'body-parser'
+import {RequestWithBody, RequestWithParams, RequestWithParamsAndBody} from "./types";
+import {VideoCreateInputModel} from "./models/VideoCreateModel";
+import {VideoUpdateInputModel} from "./models/VideoUpdateModel";
+import {VideoViewModel} from "./models/VideoViewModel";
+import {ErrorFieldViewModel} from "./models/ErrorFieldViewModel";
+import {VideoIdURIparams} from "./models/VideoIdURIparams";
 
 export const app = express();
 const port = process.env.PORT || 3003;
 const availableRes = ['P144', 'P240', 'P360', 'P480', 'P720', 'P1080', 'P1440', 'P2160']
-let db = {
+
+type videosType = {
+    id: number,
+    title: string
+    author: string
+    canBeDownloaded: boolean
+    minAgeRestriction: number | null
+    createdAt: string
+    publicationDate: string
+    availableResolutions: string[]
+}
+let db: {videos: videosType[]} = {
     videos: [
         {
             id: 0,
@@ -50,7 +67,7 @@ app.use(parseMiddleware);
 app.get('/videos', (req: Request, res: Response) => {
     res.status(200).send(db.videos)
 })
-app.get('/videos/:ID', (req: Request, res: Response) => {
+app.get('/videos/:ID', (req: RequestWithParams<{ID: string}>, res: Response) => {
     let video = db.videos.find(p => p.id === +req.params.ID)
     if (video) {
         res.send(video);
@@ -60,7 +77,8 @@ app.get('/videos/:ID', (req: Request, res: Response) => {
     }
 })
 
-app.post('/videos', (req: Request, res: Response) => {
+app.post('/videos', (req: RequestWithBody<VideoCreateInputModel>,
+                     res: Response<VideoViewModel | ErrorFieldViewModel>) => {
     const addResolution = req.body.availableResolutions
     const validResoulution: boolean = addResolution.every((r: string) => availableRes.includes(r))
     const now = new Date();
@@ -129,7 +147,7 @@ app.post('/videos', (req: Request, res: Response) => {
     }
     })
 
-app.put('/videos/:ID', (req: Request, res: Response) => {
+app.put('/videos/:ID', (req: RequestWithParamsAndBody<VideoIdURIparams, VideoUpdateInputModel>, res: Response) => {
     const findVideo = db.videos.find(v => v.id === +req.params.ID)
     if (findVideo) {
         const addResolution = req.body.availableResolutions
@@ -228,7 +246,7 @@ app.put('/videos/:ID', (req: Request, res: Response) => {
 
 })
 
-app.delete('/videos/:ID', (req: Request, res: Response) => {
+app.delete('/videos/:ID', (req: RequestWithParams<VideoIdURIparams>, res: Response) => {
     for (let i = 0; i < db.videos.length; i++) {
         if (db.videos[i].id === +req.params.ID) {
             db.videos.splice(i, 1)
