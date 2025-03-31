@@ -6,7 +6,8 @@ import {VideoUpdateInputModel} from "./models/VideoUpdateModel";
 import {VideoViewModel} from "./models/VideoViewModel";
 import {ErrorFieldViewModel} from "./models/ErrorFieldViewModel";
 import {VideoIdURIparams} from "./models/VideoIdURIparams";
-import {db, videosRouter} from "./routes/videos-router";
+import {videosRouter} from "./routes/videos-router";
+import {db} from "./repositories/videos-repository"
 
 export const app = express();
 const port = process.env.PORT || 3003;
